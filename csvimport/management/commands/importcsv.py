@@ -1,19 +1,16 @@
 """ Developed for www.heliosfoundation.org by Ed Crewe and Tom Dunham
     Django command to import CSV files
 """
-import os, csv, re
+import re
 from datetime import datetime
-import codecs
-import chardet
-
-from django.db import DatabaseError
-from django.core.exceptions import ObjectDoesNotExist
-from django.core.management.base import LabelCommand, BaseCommand
 from optparse import make_option
-from django.db import models
-from django.contrib.contenttypes.models import ContentType
 
+from django import dispatch
+from django.contrib.contenttypes.models import ContentType
 from django.conf import settings
+from django.core.management.base import LabelCommand, BaseCommand
+from django.db import DatabaseError, models
+
 from csvimport.parser import CSVParser
 from csvimport.signals import imported_csv, importing_csv
 
@@ -30,11 +27,10 @@ SMALLINT_DBS = ['sqlite3', ]
 DATE = ['DateField', 'TimeField', 'DateTimeField']
 BOOLEAN = ['BooleanField', 'NullBooleanField']
 BOOLEAN_TRUE = [1, '1', 'Y', 'Yes', 'yes', 'True', 'true', 'T', 't']
-DATE_INPUT_FORMATS = settings.DATE_INPUT_FORMATS or ('%d/%m/%Y','%Y/%m/%d')
-CSV_DATE_INPUT_FORMATS = DATE_INPUT_FORMATS + ('%d-%m-%Y','%Y-%m-%d')
+DATE_INPUT_FORMATS = settings.DATE_INPUT_FORMATS or ('%d/%m/%Y', '%Y/%m/%d')
+CSV_DATE_INPUT_FORMATS = DATE_INPUT_FORMATS + ('%d-%m-%Y', '%Y-%m-%d')
 cleancol = re.compile('[^0-9a-zA-Z]+')  # cleancol.sub('_', s)
 
-from django import dispatch
 
 imported_csv = dispatch.Signal(providing_args=['instance', 'row'])
 importing_csv = dispatch.Signal(providing_args=['instance', 'row'])
@@ -68,6 +64,7 @@ def save_csvimport(props=None, instance=None):
                 print (line)
         return
 
+
 class Command(LabelCommand, CSVParser):
     """
     Parse and import a CSV resource to a Django model.
@@ -90,7 +87,6 @@ class Command(LabelCommand, CSVParser):
                            help='Force the charset conversion used rather than detect it')
                    )
     help = "Imports a CSV file to a model"
-
 
     def __init__(self):
         """ Set default attributes data types """
@@ -231,7 +227,7 @@ class Command(LabelCommand, CSVParser):
 
                 if self.debug:
                     loglist.append('%s.%s = "%s"' % (self.model.__name__,
-                                                          field, row[column]))
+                                                     field, row[column]))
                 try:
                     row[column] = self.type_clean(field, row[column], loglist, i)
                 except:
@@ -246,7 +242,6 @@ class Command(LabelCommand, CSVParser):
                     except:
                         msg = 'row %s: Column %s = %s couldnt be set for row' % (i, field, row[column])
                         loglist.append(msg)
-
 
             if self.defaults:
                 for (field, value, foreignkey) in self.defaults:
@@ -288,8 +283,8 @@ class Command(LabelCommand, CSVParser):
                     loglist.append(
                         'Database Error: %s, Number: %d' % (error_message,
                                                             error_number))
-            #except OverflowError:
-            #    pass
+            # except OverflowError:
+            #     pass
 
             if CSVIMPORT_LOG == 'logger':
                 for line in loglist:
@@ -303,11 +298,11 @@ class Command(LabelCommand, CSVParser):
             logger.info(countmsg)
         if self.loglist:
             self.loglist.append(countmsg)
-            self.props = {'file_name':self.file_name,
-                          'import_user':'cron',
-                          'upload_method':'cronjob',
-                          'error_log':'\n'.join(loglist),
-                          'import_date':datetime.now()}
+            self.props = {'file_name': self.file_name,
+                          'import_user': 'cron',
+                          'upload_method': 'cronjob',
+                          'error_log': '\n'.join(loglist),
+                          'import_date': datetime.now()}
             return self.loglist
         else:
             return ['No logging', ]
@@ -333,8 +328,8 @@ class Command(LabelCommand, CSVParser):
                 try:
                     value = float(value)
                 except:
-                    loglist.append('row %s: Column %s = %s is not a number so is set to 0' \
-                                        % (row, field, value))
+                    loglist.append('row %s: Column %s = %s is not a number so is set to 0'
+                                   % (row, field, value))
                     value = 0
             if field_type in INTEGER:
                 # 1e+28 = 9999999999999999583119736832L
@@ -346,13 +341,13 @@ class Command(LabelCommand, CSVParser):
                         value = 9223372036854775807
                     loglist.append(intmsg)
                 if str(value).lower() in ('nan', 'inf', '+inf', '-inf'):
-                    loglist.append('row %s: Column %s = %s is not an integer so is set to 0' \
-                                        % (row, field, value))
+                    loglist.append('row %s: Column %s = %s is not an integer so is set to 0'
+                                   % (row, field, value))
                     value = 0
                 value = int(value)
                 if value < 0 and field_type.startswith('Positive'):
-                    loglist.append('row %s: Column %s = %s, less than zero so set to 0' \
-                                        % (row, field, value))
+                    loglist.append('row %s: Column %s = %s, less than zero so set to 0'
+                                   % (row, field, value))
                     value = 0
         # date data - remove the date if it doesn't convert so null=True can work
         if field_type in DATE:
@@ -416,7 +411,7 @@ class Command(LabelCommand, CSVParser):
 
     def check_fkey(self, key, field):
         """ Build fkey mapping via introspection of models """
-        #TODO fix to find related field name rather than assume second field
+        # TODO fix to find related field name rather than assume second field
         if not key.endswith('_id'):
             if field.__class__ == models.ForeignKey:
                 try:
@@ -445,8 +440,9 @@ class Command(LabelCommand, CSVParser):
         if type == 0:
             # There is nothing to do. We have to quit at this point
             raise Exception(types[0][1], message)
-        elif self.debug == True:
+        elif self.debug is True:
             print ("%s: %s" % (types[type][0], message))
+
 
 class FatalError(Exception):
     """
@@ -457,4 +453,3 @@ class FatalError(Exception):
 
     def __str__(self):
         return repr(self.value)
-
